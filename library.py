@@ -27,6 +27,7 @@ try:
   import os
   import re
   import io
+  import syslog
 except ImportError:
   print("FAILURE: Failed to import required modules")
   sys.exit()
@@ -97,16 +98,6 @@ def check_dependencies():
       pass
   except OSError:
     print("FAILURE: rsyslog not installed: %s" % package)
-    sys.exit()
-  try:
-    package = syscmd("dpkg-query -W --showformat='${Package} ${Status} ${Version}\n' util-linux")
-    package = package.strip()
-    if "util-linux install ok installed" not in package:
-      raise OSError
-    else:
-      pass
-  except OSError:
-    print("FAILURE: util-linux/logger not installed: %s" % package)
     sys.exit()
     
 # check opening/creating required log file
@@ -251,16 +242,15 @@ def check_rsyslog_status():
   except OSError:
     status_flag = False
     
-# check status of rsyslog service before logging data. if rsyslog is running,
-# use logger. if rsyslog is not running, save actual memcheck log file at
-# "logs/memcheck/timestamp".
+# check status of rsyslog service before logging data. if rsyslog is not running,
+# save actual memcheck log file at "logs/memcheck/timestamp".
 def log_data(message=""):
   global status_flag
   global log_chk
   check_rsyslog_status()
-  # use logger to send data to local rsyslog service
+  # send data to local rsyslog service
   if status_flag is True:    
-    _ = syscmd("logger -t MEMCHECK_THRESHOLD_NOTIFIER.PY %s" % str(message))
+    syslog.syslog("MEMCHECK_THRESHOLD_NOTIFIER.PY %s" % str(message))
   # save to logs/memcheck/timestamp
   else:
     timestamp = calendar.timegm(time.gmtime())
